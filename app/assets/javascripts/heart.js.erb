@@ -2,8 +2,12 @@ window.addEventListener("load",function() {
   if ($('#heart-core').length !== 1) return;
 
   var Q = window.Q = Quintus({ imagePath: "/assets/", dataPath: "/assets/", development: true })
-          .include("Sprites, Scenes, Input, 2D, UI")
+          .include("Sprites, Scenes, Input, 2D, UI, Anim")
           .setup("heart-core");
+
+  Q.getActiveStage = function () {
+    return Q.stages[0];
+  };
 
   var SPRITE_PLAYER = 1;
   var SPRITE_TILES = 2;
@@ -15,6 +19,18 @@ window.addEventListener("load",function() {
 
   Q.gravityY = 0;
   Q.gravityX = 0;
+
+  Q.TileLayer.extend("Map", {
+    dataAsset: 'overworld.json'
+  });
+
+  Q.TileLayer.extend("Room", {
+      init: function (p) {
+          this._super(p);
+
+          this.add("tween");
+      }
+  });
 
   Q.Sprite.extend("Player", {
     init: function(p) {
@@ -32,8 +48,28 @@ window.addEventListener("load",function() {
     /* if the player leaves the scene, we stage the next scene */
     post_state: function () {
       Q.state.set("x", this.p.x);
-      if (Q.stages[Q.activeStage].items[0].c.w < this.p.x) {
-        Q.stageScene("level2", 0);
+      var stage = Q.getActiveStage();
+      var background = stage.getBackground();
+
+      if (background && background.c && background.c.w < this.p.x) {
+        stage.remove(this);
+        this.p.x = 0;
+
+        var room = new Q.Room({
+            dataAsset: 'zelda_test.tmx',
+            layerIndex: 0,
+            sheet: 'zelda',
+            tileW: 32,
+            tileH: 32,
+            x: background.c.w,
+            y: 0,
+            type: Q.SPRITE_NONE
+        });
+
+        stage.insert(room);
+
+        room.animate({ x: 0, y: 0 });
+        background.animate({ x: -background.c.w, y: 0 });
       }
     }
   });
@@ -71,16 +107,26 @@ window.addEventListener("load",function() {
           }),statsContainer);
   });
 
-  Q.scene("level1",function(stage) {
-    var background = new Q.TileLayer({ dataAsset: 'zelda_test.tmx', layerIndex: 0, sheet: 'zelda', tileW: 32, tileH: 32, type: Q.SPRITE_NONE });
+  Q.scene("overworld",function(stage) {
+    stage.p = {};
+
+    var background = new Q.Room({ dataAsset: 'zelda_test.tmx', layerIndex: 0, sheet: 'zelda', tileW: 32, tileH: 32, type: Q.SPRITE_NONE });
     stage.insert(background);
+    stage.p.background = background;
 
     var player = stage.insert(new Q.Player({ x: 4*32 + 16, y: 5*32 + 16 }));
+
+    stage.getBackground = function () {
+      return this.p.background;
+    };
   });
 
   Q.scene("level2",function(stage) {
+    stage.p = {};
+
     var background = new Q.TileLayer({ dataAsset: 'zelda_test.tmx', layerIndex: 0, sheet: 'zelda', tileW: 32, tileH: 32, type: Q.SPRITE_NONE });
     stage.insert(background);
+    stage.p.background = background;
 
     var player = stage.insert(new Q.Player({ x: 8*32 + 16, y: 5*32 + 16 }));
   });
@@ -89,7 +135,7 @@ window.addEventListener("load",function() {
     Q.compileSheets("sprites.png","sprites.json");
     Q.sheet("zelda","zelda.png", { tilew: 32, tileh: 32});
     Q.sheet("zelda.png");
-    Q.stageScene("level1");
+    Q.stageScene("overworld");
     Q.stageScene("debugger", 1);
   });
 });

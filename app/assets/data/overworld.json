@@ -1,0 +1,15 @@
+{
+  "Rooms": {
+    "HeartTree": {
+      "links": {
+        "north": "FirstBlood"
+      }
+    },
+
+    "FirstBlood": {
+      "links": {
+        "south": "HeartTree"
+      }
+    }
+  }
+}
