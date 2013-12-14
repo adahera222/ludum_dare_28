@@ -1,142 +1,161 @@
 window.addEventListener("load",function() {
-  if ($('#heart-core').length !== 1) return;
+    /* temporarily we will load on the front page so that we don't need to login with twitter */
+    //  if ($('#heart-core').length !== 1) return;
 
-  var Q = window.Q = Quintus({ imagePath: "/assets/", dataPath: "/assets/", development: true })
-          .include("Sprites, Scenes, Input, 2D, UI, Anim")
-          .setup("heart-core");
+    var Q = window.Q = Quintus({ imagePath: "/assets/", dataPath: "/assets/", development: true })
+    .include("Sprites, Scenes, Input, 2D, UI, Anim")
+    .setup("heart-core", { width: 14*32, height: 9*32 });
 
-  Q.getActiveStage = function () {
-    return Q.stages[0];
-  };
+    Q.getActiveStage = function () {
+        return Q.stages[0];
+    };
 
-  var SPRITE_PLAYER = 1;
-  var SPRITE_TILES = 2;
-  var SPRITE_ENEMY = 4;
-  var SPRITE_DOT = 8;
+    var SPRITE_PLAYER = 1;
+    var SPRITE_TILES = 2;
+    var SPRITE_ENEMY = 4;
+    var SPRITE_DOT = 8;
 
-  Q.input.keyboardControls();
-  Q.input.joypadControls();
+    Q.input.keyboardControls();
+    Q.input.joypadControls();
 
-  Q.gravityY = 0;
-  Q.gravityX = 0;
+    Q.gravityY = 0;
+    Q.gravityX = 0;
 
-  Q.TileLayer.extend("Map", {
-    dataAsset: 'overworld.json'
-  });
+    Q.TileLayer.extend("Map", {
+        dataAsset: 'overworld.json'
+    });
 
-  Q.TileLayer.extend("Room", {
-      init: function (p) {
-          this._super(p);
+    Q.TileLayer.extend("Room", {
+        init: function (p) {
+            this._super(p);
 
-          this.add("tween");
-      }
-  });
+            this.add("tween");
+        }
+    });
 
-  Q.Sprite.extend("Player", {
-    init: function(p) {
+    Q.Sprite.extend("Player", {
+        init: function(p) {
+            p.z = 1; // player on TOP!
 
-      this._super(p,{
-        sheet:"player",
-        type: SPRITE_PLAYER,
-        collisionMask: SPRITE_TILES | SPRITE_ENEMY | SPRITE_DOT
-      });
+            this._super(p,{
+                sheet:"player",
+                type: SPRITE_PLAYER,
+                collisionMask: SPRITE_TILES | SPRITE_ENEMY | SPRITE_DOT
+            });
 
-      this.add("2d, stepControls");
-      this.on("step", this.post_state);
-    },
+            this.add("2d, stepControls, tween");
+            this.on("step", this.post_state);
+        },
 
-    /* if the player leaves the scene, we stage the next scene */
-    post_state: function () {
-      Q.state.set("x", this.p.x);
-      var stage = Q.getActiveStage();
-      var background = stage.getBackground();
+        /* if the player leaves the scene, we stage the next scene */
+        post_state: function () {
+            var stage = Q.getActiveStage();
+            var background = stage.getBackground();
+            var room_x = Q.state.get("room_x");
+            var rel_x = this.p.x - Q.state.get("room_x");
 
-      if (background && background.c && background.c.w < this.p.x) {
-        stage.remove(this);
-        this.p.x = 0;
+            Q.state.set("player_x", rel_x);
 
-        var room = new Q.Room({
-            dataAsset: 'zelda_test.tmx',
-            layerIndex: 0,
-            sheet: 'zelda',
-            tileW: 32,
-            tileH: 32,
-            x: background.c.w,
-            y: 0,
-            type: Q.SPRITE_NONE
+            if (rel_x > (Q.state.get("room_x") + 448)) {
+                Q.state.set("player_x", rel_x - 448);
+                Q.state.set("room_x", room_x + 448);
+
+                var room = new Q.Room({
+                    dataAsset: 'zelda_test.tmx',
+                    layerIndex: 0,
+                    sheet: 'zelda',
+                    tileW: 32,
+                    tileH: 32,
+                    x: 224,
+                    y: 0,
+                    type: Q.SPRITE_NONE
+                });
+
+                stage.insert(room);
+                background.animate({ x: -224 });
+                room.animate({ x: 0 });
+                Q('Player').first().animate({ x: 0 });
+            }
+        }
+    });
+
+    Q.UI.Text.extend("Debug", {
+        init: function (p) {
+            this._super(p);
+
+            Q.state.on("change.player_x", this.update);
+        },
+
+        update: function (dt) {
+            this.p.label = "Lives x " + Q.state.get("player_x");
+        }
+    });
+
+    Q.scene("debugger", function(stage) {
+        var statsContainer = stage.insert(new Q.UI.Container({
+            fill: "gray",
+            x: Q.width - 70,
+            y: 70,
+            border: 1,
+            shadow: 3,
+            shadowColor: "rgba(0,0,0,0.5)",
+            w: 70,
+            h: 70
+        }));
+
+        var lives = stage.insert(new Q.Debug({ 
+            label: "Lives x 3",
+            color: "white",
+            x: -300,
+            y: 0
+        }),statsContainer);
+    });
+
+    Q.scene("overworld",function(stage) {
+        Q.state.reset({
+            // the universal coords of the current room
+            room_x: 0, room_y: 0,
+            // the relative coords of the player
+            player_x: 0, player_y: 0
         });
 
-        stage.insert(room);
+        stage.p = {};
 
-        room.animate({ x: 0, y: 0 });
-        background.animate({ x: -background.c.w, y: 0 });
-      }
-    }
-  });
+        var background = new Q.Room({ dataAsset: 'zelda_test.tmx', layerIndex: 0, sheet: 'zelda', tileW: 32, tileH: 32, type: Q.SPRITE_NONE });
+        stage.insert(background);
+        stage.p.background = background;
 
-  Q.UI.Text.extend("Debug", {
-    init: function (p) {
-      this._super(p);
+        var starting_x = 4*32 + 16;
+        var starting_y = 5*32 + 16;
 
-      Q.state.on("change.x", this.update);
-    },
+        var player = stage.insert(new Q.Player({ x: starting_x, y: starting_y }));
 
-    update: function (dt) {
-      this.p.label = "Lives x " + Q.state.get("x");
-    }
-  });
-  
-  Q.scene("debugger", function(stage) {
-      var statsContainer = stage.insert(new Q.UI.Container({
-          fill: "gray",
-          x: Q.width - 70,
-          y: 70,
-          border: 1,
-          shadow: 3,
-          shadowColor: "rgba(0,0,0,0.5)",
-          w: 70,
-          h: 70
-          })
-      );
-          
-      var lives = stage.insert(new Q.Debug({ 
-              label: "Lives x 3",
-              color: "white",
-              x: -300,
-              y: 0
-          }),statsContainer);
-  });
+        stage.getBackground = function () {
+            return this.p.background;
+        };
+    });
 
-  Q.scene("overworld",function(stage) {
-    stage.p = {};
+    Q.scene("level2",function(stage) {
+        stage.p = {};
 
-    var background = new Q.Room({ dataAsset: 'zelda_test.tmx', layerIndex: 0, sheet: 'zelda', tileW: 32, tileH: 32, type: Q.SPRITE_NONE });
-    stage.insert(background);
-    stage.p.background = background;
+        var background = new Q.TileLayer({ dataAsset: 'zelda_test.tmx', layerIndex: 0, sheet: 'zelda', tileW: 32, tileH: 32, type: Q.SPRITE_NONE });
+        stage.insert(background);
+        stage.p.background = background;
 
-    var player = stage.insert(new Q.Player({ x: 4*32 + 16, y: 5*32 + 16 }));
+        var player = stage.insert(new Q.Player({ x: 8*32 + 16, y: 5*32 + 16 }));
+    });
 
-    stage.getBackground = function () {
-      return this.p.background;
-    };
-  });
+    Q.load("zelda.png, zelda_test.tmx, sprites.png, sprites.json, level.json", function() {
+        Q.compileSheets("sprites.png","sprites.json");
+        Q.sheet("zelda","zelda.png", { tilew: 32, tileh: 32});
+        Q.sheet("zelda.png");
+        Q.stageScene("overworld", 0, { sort: function (a, b) {
+            return a.p.z > b.p.z;
+        }});
+        Q.stageScene("debugger", 1);
 
-  Q.scene("level2",function(stage) {
-    stage.p = {};
-
-    var background = new Q.TileLayer({ dataAsset: 'zelda_test.tmx', layerIndex: 0, sheet: 'zelda', tileW: 32, tileH: 32, type: Q.SPRITE_NONE });
-    stage.insert(background);
-    stage.p.background = background;
-
-    var player = stage.insert(new Q.Player({ x: 8*32 + 16, y: 5*32 + 16 }));
-  });
-
-  Q.load("zelda.png, zelda_test.tmx, sprites.png, sprites.json, level.json", function() {
-    Q.compileSheets("sprites.png","sprites.json");
-    Q.sheet("zelda","zelda.png", { tilew: 32, tileh: 32});
-    Q.sheet("zelda.png");
-    Q.stageScene("overworld");
-    Q.stageScene("debugger", 1);
-  });
+        Q.state.set("player_x", 4*32 + 16);
+        Q.state.set("player_y", 5*32 + 16);
+    });
 });
 
