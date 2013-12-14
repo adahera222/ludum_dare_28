@@ -34,20 +34,6 @@ window.addEventListener("load",function() {
         items: ["room_0.tmx", "room_1.tmx", "room_2.tmx", "room_3.tmx"]
     };
 
-    Q.state.updatePlayer = function (p) {
-        var rel_x = p.x;
-        var rel_y = p.y;
-        var out_x = (0 < rel_x && rel_x < ROOM_WIDTH) ? false : true;
-        var out_y = (0 < rel_y && rel_y < ROOM_WIDTH) ? false : true;
-        var exiting = out_x || out_y;
-
-        // if the least of rel x and rel y is negative, we are exiting
-        // if the greatest of room_x - rel_x or y is negative we are exiting
-        this.set("player_x", rel_x);
-        this.set("player_y", rel_y);
-        this.set("exiting", exiting);
-    };
-
     /* this is a little weird: the room list is an array with
      * a width and height specified. If the player goes left,
      * or up, I can determine the next spot in the array to
@@ -74,8 +60,6 @@ window.addEventListener("load",function() {
         var room_file = Q.rooms.items[this.p.room + offset];
 
         Q.state.set("room", this.p.room + offset); // update the current room
-        Q.state.set("room_x", this.p.room_x + (direction[0] * ROOM_WIDTH));
-        Q.state.set("room_y", this.p.room_y + (direction[1] * ROOM_HEIGHT));
 
         var room_origin = {
             x: ROOM_WIDTH * direction[0],
@@ -115,14 +99,21 @@ window.addEventListener("load",function() {
             });
 
             this.add("2d, stepControls, tween");
-            this.on("step", this.post_state);
+            this.on("step", this.checkBounds);
         },
 
         /* if the player leaves the scene, we stage the next scene */
-        post_state: function () {
+        checkBounds: function () {
+            var rel_x = this.p.x;
+            var rel_y = this.p.y;
 
-            Q.state.updatePlayer(this.p);
+            $('#player_x').text(rel_x);
+            $('#player_y').text(rel_y);
+            var out_x = (0 < rel_x && rel_x < ROOM_WIDTH) ? false : true;
+            var out_y = (0 < rel_y && rel_y < ROOM_HEIGHT) ? false : true;
+            var exiting = out_x || out_y;
 
+            Q.state.set("exiting", exiting);
         }
     });
 
@@ -134,8 +125,6 @@ window.addEventListener("load",function() {
         },
 
         update: function (dt) {
-            $('#player_x').text("player x: " + parseInt(Q.state.get("player_x", 10)));
-            $('#player_y').text("player y: " + parseInt(Q.state.get("player_y")));
             $('#room_x').text("room x: " + Q.state.get("room_x"));
             $('#room_y').text("room y: " + Q.state.get("room_y"));
             $('#room').text("room: " + Q.state.get("room"));
@@ -172,35 +161,31 @@ window.addEventListener("load",function() {
             room_x: 0,
             room_y: 0,
 
-            // the relative coords of the player
-            player_x: starting_x,
-            player_y: starting_y,
-
             // whether the game state thinks the player is "leaving"
             exiting: false
         });
 
         stage.p = {};
+        stage.p.rooms = [];
 
-        var background = new Q.Room({ dataAsset: Q.rooms.items[Q.state.get("room")], layerIndex: 0, sheet: 'zelda', tileW: 32, tileH: 32, type: Q.SPRITE_NONE });
-        stage.insert(background);
-        stage.p.background = background;
+        var room = new Q.Room({ dataAsset: Q.rooms.items[Q.state.get("room")], layerIndex: 0, sheet: 'zelda', tileW: 32, tileH: 32, type: Q.SPRITE_NONE });
+        stage.insert(room);
+        stage.p.rooms[Q.state.get("room")] = room;
 
         var player = stage.insert(new Q.Player({ x: starting_x, y: starting_y }));
 
-        stage.getBackground = function () {
-            return this.p.background;
+        stage.getRoom = function (i) {
+            return this.p.rooms[i];
         };
 
         this.zeldaSlide = function () {
             if (Q.state.get("exiting") === false) return false;
 
-            console.log("zeldaSlide");
             var player = Q('Player').first();
             var p = player.p;
 
-            var rel_x = Q.state.get("player_x");
-            var rel_y = Q.state.get("player_y");
+            var rel_x = p.x;
+            var rel_y = p.y;
 
             /* we know that the player is exiting, we have but
              * to determine the direction */
@@ -208,10 +193,9 @@ window.addEventListener("load",function() {
                                 (rel_y < 0)? UP             :
                                 (rel_x > ROOM_WIDTH)? RIGHT : DOWN;
 
-            var room = Q.state.nextRoom(direction);
-
             var stage = Q.getActiveStage();
-            var background = stage.getBackground();
+            var current_room = stage.getRoom(Q.state.get("room"));
+            var new_room = Q.state.nextRoom(direction);
 
             /* set rel_x and rel_y so that the relevant one is near zero */
             if (direction[0] !== 0) {
@@ -223,11 +207,14 @@ window.addEventListener("load",function() {
 
             /* we slide room 2 to x: -224, y: 224 and room 3 to x: 0, y: 0 */
 
-            stage.insert(room);
-            background.animate({ x: -(direction[0]) * (ROOM_WIDTH / 2), y: direction[1] * (ROOM_HEIGHT / 2) });
-            room.animate({ x: 0 });
-            Q('Player').first().animate({ x: rel_x });
+            stage.insert(new_room);
+            stage.p.rooms[Q.state.get("room")] = new_room;
+            current_room.animate({ x: -(direction[0]) * (ROOM_WIDTH / 2), y: -(direction[1]) * (ROOM_HEIGHT / 2) }, { callback: function () {
+                stage.remove(current_room); // I sort of have to use an anonymous function here
+            }});
 
+            new_room.animate({ x: 0, y:0 });
+            player.animate({ x: rel_x, y: rel_y });
         };
 
         /* later, add this to a component called "zeldaSlide" */
