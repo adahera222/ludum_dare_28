@@ -117,40 +117,6 @@ window.addEventListener("load",function() {
         }
     });
 
-    Q.UI.Text.extend("Debug", {
-        init: function (p) {
-            this._super(p);
-
-            Q.state.on("change", this.update);
-        },
-
-        update: function (dt) {
-            $('#room_x').text("room x: " + Q.state.get("room_x"));
-            $('#room_y').text("room y: " + Q.state.get("room_y"));
-            $('#room').text("room: " + Q.state.get("room"));
-        }
-    });
-
-    Q.scene("debugger", function(stage) {
-        var statsContainer = stage.insert(new Q.UI.Container({
-            fill: "gray",
-            x: Q.width - 70,
-            y: 70,
-            border: 1,
-            shadow: 3,
-            shadowColor: "rgba(0,0,0,0.5)",
-            w: 70,
-            h: 70
-        }));
-
-        var lives = stage.insert(new Q.Debug({ 
-            label: "",
-            color: "white",
-            x: -300,
-            y: 0
-        }),statsContainer);
-    });
-
     Q.scene("overworld",function(stage) {
         var starting_x = 4*32 + 16;
         var starting_y = 5*32 + 16;
@@ -228,8 +194,6 @@ window.addEventListener("load",function() {
         Q.stageScene("overworld", 0, { sort: function (a, b) {
             return a.p.z > b.p.z;
         }});
-
-        Q.stageScene("debugger", 1);
     });
 });
 
