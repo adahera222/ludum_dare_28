@@ -9,6 +9,7 @@ gem 'omniauth-twitter'
 gem 'rails_12factor'
 gem 'twitter'
 gem 'twitter-text'
+gem 'jquery-rails'
 
 group :assets do
   gem 'sass-rails'
