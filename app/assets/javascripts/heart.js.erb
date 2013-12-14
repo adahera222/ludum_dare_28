@@ -5,28 +5,49 @@ window.addEventListener("load",function() {
           .include("Sprites, Scenes, Input, 2D")
           .setup("heart-core");
 
+  var SPRITE_PLAYER = 1;
+  var SPRITE_TILES = 2;
+  var SPRITE_ENEMY = 4;
+  var SPRITE_DOT = 8;
+
   Q.input.keyboardControls();
   Q.input.joypadControls();
+
+  Q.gravityY = 0;
+  Q.gravityX = 0;
 
   Q.Sprite.extend("Player", {
     init: function(p) {
 
       this._super(p,{
-        sheet:"player"
+        sheet:"player",
+        type: SPRITE_PLAYER,
+        collisionMask: SPRITE_TILES | SPRITE_ENEMY | SPRITE_DOT
       });
 
-      this.add("2d");
+      this.add("2d, stepControls");
     }
   });
 
   Q.scene("level1",function(stage) {
-    var player = stage.insert(new Q.Player({ x: 48, y: 48 }));
+    var background = new Q.TileLayer({ dataAsset: 'zelda_test.tmx', layerIndex: 0, sheet: 'zelda', tileW: 32, tileH: 32, type: Q.SPRITE_NONE });
+    stage.insert(background);
+
+    var player = stage.insert(new Q.Player({ x: 4*32 + 16, y: 5*32 + 16 }));
   });
 
-  Q.load("sprites.png, sprites.json, level.json", function() {
+  Q.scene("level2",function(stage) {
+    var background = new Q.TileLayer({ dataAsset: 'zelda_test.tmx', layerIndex: 0, sheet: 'zelda', tileW: 32, tileH: 32, type: Q.SPRITE_NONE });
+    stage.insert(background);
+
+    var player = stage.insert(new Q.Player({ x: 8*32 + 16, y: 5*32 + 16 }));
+  });
+
+  Q.load("zelda.png, zelda_test.tmx, sprites.png, sprites.json, level.json", function() {
     Q.compileSheets("sprites.png","sprites.json");
+    Q.sheet("zelda","zelda.png", { tilew: 32, tileh: 32});
+    Q.sheet("zelda.png");
     Q.stageScene("level1");
   });
-
 });
 
