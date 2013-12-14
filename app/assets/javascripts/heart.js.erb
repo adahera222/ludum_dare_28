@@ -1,0 +1,32 @@
+window.addEventListener("load",function() {
+  if ($('#heart-core').length !== 1) return;
+
+  var Q = window.Q = Quintus({ imagePath: "/assets/", dataPath: "/assets/", development: true })
+          .include("Sprites, Scenes, Input, 2D")
+          .setup("heart-core");
+
+  Q.input.keyboardControls();
+  Q.input.joypadControls();
+
+  Q.Sprite.extend("Player", {
+    init: function(p) {
+
+      this._super(p,{
+        sheet:"player"
+      });
+
+      this.add("2d");
+    }
+  });
+
+  Q.scene("level1",function(stage) {
+    var player = stage.insert(new Q.Player({ x: 48, y: 48 }));
+  });
+
+  Q.load("sprites.png, sprites.json, level.json", function() {
+    Q.compileSheets("sprites.png","sprites.json");
+    Q.stageScene("level1");
+  });
+
+});
+
