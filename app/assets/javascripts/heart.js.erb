@@ -34,6 +34,10 @@ window.addEventListener("load",function() {
         items: ["room_0.tmx", "room_1.tmx", "room_2.tmx", "room_3.tmx"]
     };
 
+    Q.state.damagePlayer = function (amount) {
+        this.set("hp", this.p.hp - amount);
+    };
+
     /* this is a little weird: the room list is an array with
      * a width and height specified. If the player goes left,
      * or up, I can determine the next spot in the array to
@@ -70,12 +74,12 @@ window.addEventListener("load",function() {
         return new Q.Room({
             dataAsset: room_file,
             layerIndex: 0,
-            sheet: 'zelda',
+            sheet: 'hand',
             tileW: 32,
             tileH: 32,
             x: room_origin.x / 2,
             y: room_origin.y / 2,
-            type: Q.SPRITE_NONE
+            type: SPRITE_TILES
         });
     };
 
@@ -85,6 +89,27 @@ window.addEventListener("load",function() {
             this._super(p);
 
             this.add("tween");
+        }
+    });
+
+    Q.Sprite.extend("FullHeart", {
+        init: function (p) {
+            this._super(p);
+        }
+    });
+
+    Q.Sprite.extend("Monster", {
+        init: function (p) {
+            this._super(p);
+            this.add("2d");
+
+            this.on("bump", this.melee);
+        },
+
+        melee: function (col) {
+            if (col.obj.isA("Player")) {
+                Q.state.damagePlayer();
+            }
         }
     });
 
@@ -117,6 +142,24 @@ window.addEventListener("load",function() {
         }
     });
 
+    Q.scene("heart_bar", function(stage) {
+
+        var hearts = [];
+        for (i = 0; i < 1; i++) {
+            hearts.push(new Q.FullHeart({
+                x: 10,
+                y: 10
+            }));
+            stage.insert(hearts[0]);
+        };
+
+        this.updateHearts = function () {
+            console.log("updating hearts");
+        };
+
+        Q.state.change("hp", this.updateHearts);
+    });
+
     Q.scene("overworld",function(stage) {
         var starting_x = 4*32 + 16;
         var starting_y = 5*32 + 16;
@@ -126,6 +169,7 @@ window.addEventListener("load",function() {
             room: 2,
             room_x: 0,
             room_y: 0,
+            hp: 2,
 
             // whether the game state thinks the player is "leaving"
             exiting: false
@@ -134,8 +178,10 @@ window.addEventListener("load",function() {
         stage.p = {};
         stage.p.rooms = [];
 
-        var room = new Q.Room({ dataAsset: Q.rooms.items[Q.state.get("room")], layerIndex: 0, sheet: 'zelda', tileW: 32, tileH: 32, type: Q.SPRITE_NONE });
-        stage.insert(room);
+        var room       = new Q.Room({ dataAsset: Q.rooms.items[Q.state.get("room")], layerIndex: 0, sheet: 'hand', tileW: 32, tileH: 32, type: SPRITE_TILES });
+        var background = new Q.Room({ dataAsset: "background.tmx", layerIndex: 0, sheet: 'hand', tileW: 32, tileH: 32, type: Q.SPRITE_NONE });
+        stage.insert(background);
+        stage.collisionLayer(room);
         stage.p.rooms[Q.state.get("room")] = room;
 
         var player = stage.insert(new Q.Player({ x: starting_x, y: starting_y }));
@@ -173,7 +219,7 @@ window.addEventListener("load",function() {
 
             /* we slide room 2 to x: -224, y: 224 and room 3 to x: 0, y: 0 */
 
-            stage.insert(new_room);
+            stage.collisionLayer(new_room);
             stage.p.rooms[Q.state.get("room")] = new_room;
             current_room.animate({ x: -(direction[0]) * (ROOM_WIDTH / 2), y: -(direction[1]) * (ROOM_HEIGHT / 2) }, { callback: function () {
                 stage.remove(current_room); // I sort of have to use an anonymous function here
@@ -187,13 +233,13 @@ window.addEventListener("load",function() {
         Q.state.on("change.exiting", this.zeldaSlide);
     });
 
-    Q.load("zelda.png, room_0.tmx, room_1.tmx, room_2.tmx, room_3.tmx, sprites.png, sprites.json, level.json", function() {
+    Q.load("zelda.png, background.tmx, zelda_hand_tiles.png, zelda_hand_test.tmx, room_0.tmx, room_1.tmx, room_2.tmx, room_3.tmx, sprites.png, sprites.json, level.json", function() {
         Q.compileSheets("sprites.png","sprites.json");
-        Q.sheet("zelda","zelda.png", { tilew: 32, tileh: 32});
-        Q.sheet("zelda.png");
+        Q.sheet("hand","zelda_hand_tiles.png", { tilew: 32, tileh: 32});
         Q.stageScene("overworld", 0, { sort: function (a, b) {
             return a.p.z > b.p.z;
         }});
+        // Q.stageScene("heart_bar", 0, { sort: function (a, b) {
     });
 });
 
