@@ -2,7 +2,7 @@ window.addEventListener("load",function() {
   if ($('#heart-core').length !== 1) return;
 
   var Q = window.Q = Quintus({ imagePath: "/assets/", dataPath: "/assets/", development: true })
-          .include("Sprites, Scenes, Input, 2D")
+          .include("Sprites, Scenes, Input, 2D, UI")
           .setup("heart-core");
 
   var SPRITE_PLAYER = 1;
@@ -26,7 +26,49 @@ window.addEventListener("load",function() {
       });
 
       this.add("2d, stepControls");
+      this.on("step", this.post_state);
+    },
+
+    /* if the player leaves the scene, we stage the next scene */
+    post_state: function () {
+      Q.state.set("x", this.p.x);
+      if (Q.stages[Q.activeStage].items[0].c.w < this.p.x) {
+        Q.stageScene("level2", 0);
+      }
     }
+  });
+
+  Q.UI.Text.extend("Debug", {
+    init: function (p) {
+      this._super(p);
+
+      Q.state.on("change.x", this.update);
+    },
+
+    update: function (dt) {
+      this.p.label = "Lives x " + Q.state.get("x");
+    }
+  });
+  
+  Q.scene("debugger", function(stage) {
+      var statsContainer = stage.insert(new Q.UI.Container({
+          fill: "gray",
+          x: Q.width - 70,
+          y: 70,
+          border: 1,
+          shadow: 3,
+          shadowColor: "rgba(0,0,0,0.5)",
+          w: 70,
+          h: 70
+          })
+      );
+          
+      var lives = stage.insert(new Q.Debug({ 
+              label: "Lives x 3",
+              color: "white",
+              x: -300,
+              y: 0
+          }),statsContainer);
   });
 
   Q.scene("level1",function(stage) {
@@ -48,6 +90,7 @@ window.addEventListener("load",function() {
     Q.sheet("zelda","zelda.png", { tilew: 32, tileh: 32});
     Q.sheet("zelda.png");
     Q.stageScene("level1");
+    Q.stageScene("debugger", 1);
   });
 });
 
