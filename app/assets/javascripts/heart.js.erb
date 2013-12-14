@@ -11,9 +11,17 @@ window.addEventListener("load",function() {
     };
 
     var SPRITE_PLAYER = 1;
-    var SPRITE_TILES = 2;
-    var SPRITE_ENEMY = 4;
-    var SPRITE_DOT = 8;
+    var SPRITE_TILES  = 2;
+    var SPRITE_ENEMY  = 4;
+    var SPRITE_DOT    = 8;
+
+    var ROOM_WIDTH  = 448;
+    var ROOM_HEIGHT = 288;
+
+    var LEFT  = [-1,  0];
+    var RIGHT = [ 1,  0];
+    var UP    = [ 0, -1];
+    var DOWN  = [ 0,  1];
 
     Q.input.keyboardControls();
     Q.input.joypadControls();
@@ -21,9 +29,72 @@ window.addEventListener("load",function() {
     Q.gravityY = 0;
     Q.gravityX = 0;
 
-    Q.TileLayer.extend("Map", {
-        dataAsset: 'overworld.json'
-    });
+    Q.rooms = {
+        dimensions: { w: 2, h:  2 },
+        items: ["room_0.tmx", "room_1.tmx", "room_2.tmx", "room_3.tmx"]
+    };
+
+    Q.state.updatePlayer = function (p) {
+        var rel_x = p.x;
+        var rel_y = p.y;
+        var out_x = (0 < rel_x && rel_x < ROOM_WIDTH) ? false : true;
+        var out_y = (0 < rel_y && rel_y < ROOM_WIDTH) ? false : true;
+        var exiting = out_x || out_y;
+
+        // if the least of rel x and rel y is negative, we are exiting
+        // if the greatest of room_x - rel_x or y is negative we are exiting
+        this.set("player_x", rel_x);
+        this.set("player_y", rel_y);
+        this.set("exiting", exiting);
+    };
+
+    /* this is a little weird: the room list is an array with
+     * a width and height specified. If the player goes left,
+     * or up, I can determine the next spot in the array to
+     * use. There are edge cases, such as the player going "left"
+     * when they are already at the left-most room. In this
+     * case my solution won't work, because left would wrap them
+     * around the world. However, I can ignore those cases, since
+     * the left-most room will not have an exit left option.
+     * (NOTE: it also makes for a cool glitch later) */
+    Q.state.offsetForDirection = function (direction) {
+        /* TODO name this variable */
+        var what_to_call_this = [1, Q.rooms.dimensions.w];
+
+        for (i = 0; i < 2; i++) {
+            what_to_call_this[i] *= direction[i];
+        }
+
+        return (what_to_call_this[0] !== 0)? what_to_call_this[0] : what_to_call_this[1];
+    };
+
+    Q.state.nextRoom = function (direction) {
+
+        var offset = this.offsetForDirection(direction);
+        var room_file = Q.rooms.items[this.p.room + offset];
+
+        Q.state.set("room", this.p.room + offset); // update the current room
+        Q.state.set("room_x", this.p.room_x + (direction[0] * ROOM_WIDTH));
+        Q.state.set("room_y", this.p.room_y + (direction[1] * ROOM_HEIGHT));
+
+        var room_origin = {
+            x: ROOM_WIDTH * direction[0],
+            y: ROOM_HEIGHT * direction[1]
+        }
+
+        /* going from room 2 to room 3 we do x: 224, y: 0 */
+        return new Q.Room({
+            dataAsset: room_file,
+            layerIndex: 0,
+            sheet: 'zelda',
+            tileW: 32,
+            tileH: 32,
+            x: room_origin.x / 2,
+            y: room_origin.y / 2,
+            type: Q.SPRITE_NONE
+        });
+    };
+
 
     Q.TileLayer.extend("Room", {
         init: function (p) {
@@ -49,33 +120,9 @@ window.addEventListener("load",function() {
 
         /* if the player leaves the scene, we stage the next scene */
         post_state: function () {
-            var stage = Q.getActiveStage();
-            var background = stage.getBackground();
-            var room_x = Q.state.get("room_x");
-            var rel_x = this.p.x - Q.state.get("room_x");
 
-            Q.state.set("player_x", rel_x);
+            Q.state.updatePlayer(this.p);
 
-            if (rel_x > (Q.state.get("room_x") + 448)) {
-                Q.state.set("player_x", rel_x - 448);
-                Q.state.set("room_x", room_x + 448);
-
-                var room = new Q.Room({
-                    dataAsset: 'zelda_test.tmx',
-                    layerIndex: 0,
-                    sheet: 'zelda',
-                    tileW: 32,
-                    tileH: 32,
-                    x: 224,
-                    y: 0,
-                    type: Q.SPRITE_NONE
-                });
-
-                stage.insert(room);
-                background.animate({ x: -224 });
-                room.animate({ x: 0 });
-                Q('Player').first().animate({ x: 0 });
-            }
         }
     });
 
@@ -83,11 +130,15 @@ window.addEventListener("load",function() {
         init: function (p) {
             this._super(p);
 
-            Q.state.on("change.player_x", this.update);
+            Q.state.on("change", this.update);
         },
 
         update: function (dt) {
-            this.p.label = "Lives x " + Q.state.get("player_x");
+            $('#player_x').text("player x: " + parseInt(Q.state.get("player_x", 10)));
+            $('#player_y').text("player y: " + parseInt(Q.state.get("player_y")));
+            $('#room_x').text("room x: " + Q.state.get("room_x"));
+            $('#room_y').text("room y: " + Q.state.get("room_y"));
+            $('#room').text("room: " + Q.state.get("room"));
         }
     });
 
@@ -104,7 +155,7 @@ window.addEventListener("load",function() {
         }));
 
         var lives = stage.insert(new Q.Debug({ 
-            label: "Lives x 3",
+            label: "",
             color: "white",
             x: -300,
             y: 0
@@ -112,50 +163,86 @@ window.addEventListener("load",function() {
     });
 
     Q.scene("overworld",function(stage) {
+        var starting_x = 4*32 + 16;
+        var starting_y = 5*32 + 16;
+
         Q.state.reset({
             // the universal coords of the current room
-            room_x: 0, room_y: 0,
+            room: 2,
+            room_x: 0,
+            room_y: 0,
+
             // the relative coords of the player
-            player_x: 0, player_y: 0
+            player_x: starting_x,
+            player_y: starting_y,
+
+            // whether the game state thinks the player is "leaving"
+            exiting: false
         });
 
         stage.p = {};
 
-        var background = new Q.Room({ dataAsset: 'zelda_test.tmx', layerIndex: 0, sheet: 'zelda', tileW: 32, tileH: 32, type: Q.SPRITE_NONE });
+        var background = new Q.Room({ dataAsset: Q.rooms.items[Q.state.get("room")], layerIndex: 0, sheet: 'zelda', tileW: 32, tileH: 32, type: Q.SPRITE_NONE });
         stage.insert(background);
         stage.p.background = background;
-
-        var starting_x = 4*32 + 16;
-        var starting_y = 5*32 + 16;
 
         var player = stage.insert(new Q.Player({ x: starting_x, y: starting_y }));
 
         stage.getBackground = function () {
             return this.p.background;
         };
+
+        this.zeldaSlide = function () {
+            if (Q.state.get("exiting") === false) return false;
+
+            console.log("zeldaSlide");
+            var player = Q('Player').first();
+            var p = player.p;
+
+            var rel_x = Q.state.get("player_x");
+            var rel_y = Q.state.get("player_y");
+
+            /* we know that the player is exiting, we have but
+             * to determine the direction */
+            var direction =     (rel_x < 0)? LEFT           :
+                                (rel_y < 0)? UP             :
+                                (rel_x > ROOM_WIDTH)? RIGHT : DOWN;
+
+            var room = Q.state.nextRoom(direction);
+
+            var stage = Q.getActiveStage();
+            var background = stage.getBackground();
+
+            /* set rel_x and rel_y so that the relevant one is near zero */
+            if (direction[0] !== 0) {
+                rel_x += (direction[0] < 0)? ROOM_WIDTH  : -ROOM_WIDTH;
+
+            } else {
+                rel_y += (direction[1] < 0)? ROOM_HEIGHT : -ROOM_HEIGHT;
+            }
+
+            /* we slide room 2 to x: -224, y: 224 and room 3 to x: 0, y: 0 */
+
+            stage.insert(room);
+            background.animate({ x: -(direction[0]) * (ROOM_WIDTH / 2), y: direction[1] * (ROOM_HEIGHT / 2) });
+            room.animate({ x: 0 });
+            Q('Player').first().animate({ x: rel_x });
+
+        };
+
+        /* later, add this to a component called "zeldaSlide" */
+        Q.state.on("change.exiting", this.zeldaSlide);
     });
 
-    Q.scene("level2",function(stage) {
-        stage.p = {};
-
-        var background = new Q.TileLayer({ dataAsset: 'zelda_test.tmx', layerIndex: 0, sheet: 'zelda', tileW: 32, tileH: 32, type: Q.SPRITE_NONE });
-        stage.insert(background);
-        stage.p.background = background;
-
-        var player = stage.insert(new Q.Player({ x: 8*32 + 16, y: 5*32 + 16 }));
-    });
-
-    Q.load("zelda.png, zelda_test.tmx, sprites.png, sprites.json, level.json", function() {
+    Q.load("zelda.png, room_0.tmx, room_1.tmx, room_2.tmx, room_3.tmx, sprites.png, sprites.json, level.json", function() {
         Q.compileSheets("sprites.png","sprites.json");
         Q.sheet("zelda","zelda.png", { tilew: 32, tileh: 32});
         Q.sheet("zelda.png");
         Q.stageScene("overworld", 0, { sort: function (a, b) {
             return a.p.z > b.p.z;
         }});
-        Q.stageScene("debugger", 1);
 
-        Q.state.set("player_x", 4*32 + 16);
-        Q.state.set("player_y", 5*32 + 16);
+        Q.stageScene("debugger", 1);
     });
 });
 
