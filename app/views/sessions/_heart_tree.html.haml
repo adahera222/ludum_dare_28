@@ -5,9 +5,16 @@
     .modal-content
       .modal-header
         %button.close{"aria-hidden" => "true", "data-dismiss" => "modal", type: "button"} ×
-        %h4#myModalLabel.modal-title Modal title
+        %h4#myModalLabel.modal-title You Only Get One
       .modal-body
         %p.heart-tree
-          Not everyone can be the hero. You can't lift the sword with just one heart. Will you die here, and give your heart to another; or will you be the one?
+          You can't lift the sword with just one heart. You came here to save the world, but not everyone can do that. Maybe you are the one who can; maybe you are someone who will give their heart to another, in the hopes that they will be the one.
+        %p
+          If you give your heart away, you do not get another one.
       .modal-footer
-        %button.btn.btn-default{"data-dismiss" => "modal", type: "button"} Close
+        .row
+          .span3
+            %p
+              Press 'x' to give your heart
+          .span2
+            %button.btn.btn-default{"data-dismiss" => "modal", type: "button"} Close

@@ -1,7 +1,7 @@
 window.addEventListener("load",function() {
 
     /* temporarily we will load on the front page so that we don't need to login with twitter */
-    //  if ($('#heart-core').length !== 1) return;
+    if ($('#heart-core').length !== 1) return;
 
     var Q = window.Q = Quintus({ imagePath: "/", dataPath: "/", development: true })
     .include("Sprites, Scenes, Input, 2D, UI, Anim")
@@ -165,9 +165,6 @@ window.addEventListener("load",function() {
            ["Monster", { x: 10*32 + 16,  y: 4*32 + 16}],
            ["Monster", { x: 12*32 + 16,  y: 4*32 + 16}],
            ["Monster", { x: 14*32 + 16,  y: 4*32 + 16}],
-           ["Monster", { x: 10*32 + 16,  y: 6*32 + 16}],
-           ["Monster", { x: 12*32 + 16,  y: 6*32 + 16}],
-           ["Monster", { x: 14*32 + 16,  y: 6*32 + 16}],
            ["Bush", { x: 10*32 + 16,  y: 9*32 + 16}],
            ["Bush", { x: 12*32 + 16,  y: 9*32 + 16}],
            ["Bush", { x: 14*32 + 16,  y: 9*32 + 16}],
@@ -361,7 +358,7 @@ window.addEventListener("load",function() {
         },
 
         _melee: function () {
-            if (this.p.sword === false) return;
+            if (Q.state.get("sword") === false) return;
 
             this.sword.p.x = this.p.x + 32 * this.p.direction[0];
             this.sword.p.y = this.p.y + 32 * this.p.direction[1];
@@ -381,7 +378,7 @@ window.addEventListener("load",function() {
         },
 
         _heartAction: function () {
-            $("[data-toggle=modal]").trigger("click.bs.modal.data-api");
+            $("[data-target=#hero-form]").trigger("click.bs.modal.data-api");
         },
 
         /* if the player leaves the scene, we stage the next scene */
@@ -498,7 +495,7 @@ window.addEventListener("load",function() {
             room_y: 0,
             hp: $('[data-hp]').data('hp') || 1,
             damage: 0,
-            sword: $('[data-sword]').data('sword') || true,
+            sword: $('[data-sword]').data('sword'),
 
             // whether the game state thinks the player is "leaving"
             exiting: false

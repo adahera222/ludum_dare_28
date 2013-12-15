@@ -7,12 +7,18 @@
       = form_for @receiver, remote: true do |f|
         .modal-header
           %button.close{"aria-hidden" => "true", "data-dismiss" => "modal", type: "button"} ×
-          %h4#myModalLabel.modal-title Modal title
+          %h4#myModalLabel.modal-title Give Someone A Heart?
         .modal-body
-          %p
-            = f.label :handle
-            %br/
-            = f.text_field :handle
+          .row
+            .span5
+              .row
+                .span2
+                  %p
+                    Think twice before giving away your last heart. You only get one.
+                .span3
+                  = f.label :handle
+                  %br/
+                  = f.text_field :handle
         .modal-footer
           %button.btn.btn-default{"data-dismiss" => "modal", type: "button"} Close
-          = f.submit({ class: "btn btn-primary", data: { dismiss: "modal" }})
+          = f.submit({ class: "btn btn-primary", value: "Give Heart", data: { dismiss: "modal" }})

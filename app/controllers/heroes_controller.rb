@@ -20,6 +20,11 @@ class HeroesController < ApplicationController
 
   # POST /heroes
   def create
+    screen_name = params[:hero][:handle]
+
+    if (screen_name[0] == "@")
+      screen_name[0] = ""
+    end
 
     @user = Hero.find_by(handle: session['user'])
     @hero = Hero.find_or_create_by({ handle: params[:hero][:handle] }) do |hero|
@@ -32,7 +37,6 @@ class HeroesController < ApplicationController
     @user.hp -= 1
 
     if @hero.save && @user.save
-      flash[:notice] = "Thank you so much!"
       render js: "Q.state.set('hp', #{ @user.hp });"
     end
   end
