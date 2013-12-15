@@ -68,17 +68,18 @@ window.addEventListener("load",function() {
     };
 
     Q.state.damagePlayer = function (amount) {
+        console.log("damaging player");
+
         this.set("damage", this.p.damage + amount);
-        Q.state.checkPlayerDeath();
     };
 
     Q.state.checkPlayerDeath = function () {
         console.log("Checking player death...");
-        if (this.p.hp > this.p.damage) return;
+        console.log("%o / %o", this.p.damage, this.p.hp);
+        if (2 * this.p.hp > this.p.damage) return;
 
         /* player is dead */
         Q.stageScene("endGame",1, { label: "Game Over" }); 
-        collision.obj.destroy();
     };
 
     /* this is a little weird: the room list is an array with
@@ -164,12 +165,17 @@ window.addEventListener("load",function() {
             this._super(p);
             this.add("2d");
 
-            this.on("bump", this.melee);
+            this.on("bump.left", this.melee);
+            this.damagePlayer = Q.debounce(function (amount) {
+                Q.state.damagePlayer(amount);
+            })
         },
 
         melee: function (col) {
+            console.log("bump.left");
+
             if (col.obj.isA("Player")) {
-                Q.state.damagePlayer();
+                this.damagePlayer(1);
             }
         }
     });
@@ -245,6 +251,7 @@ window.addEventListener("load",function() {
         /* when the player loses hearts we 
          * do this */
         this.updateHearts = function (hp) {
+            console.log("updating hearts...");
             var length = stage.p.hearts.length;
 
             for (; length > hp; length--) {
@@ -256,7 +263,28 @@ window.addEventListener("load",function() {
             Q.state.checkPlayerDeath();
         };
 
+        this.breakHeart = function (damage) {
+            console.log("breaking hearts...");
+            var sentinel = true;
+            var i = 0;
+            var length = stage.p.hearts.length;
+
+            while (sentinel && i < length) {
+                var heart = stage.p.hearts[i];
+
+                if (heart.p.damage < 2) {
+                    heart.breakHeart();
+                    sentinel = false;
+                }
+
+                i += 1;
+            }
+
+            Q.state.checkPlayerDeath();
+        };
+
         Q.state.on("change.hp", this.updateHearts);
+        Q.state.on("change.damage", this.breakHeart);
     });
 
     Q.scene("endGame",function(stage) {
@@ -289,7 +317,8 @@ window.addEventListener("load",function() {
         stage.collisionLayer(room);
         stage.p.rooms[Q.state.get("room")] = room;
 
-        var player = stage.insert(new Q.Player({ x: starting_x, y: starting_y }));
+        var player  = stage.insert(new Q.Player({  x: starting_x, y: starting_y }));
+        var monster = stage.insert(new Q.Monster({ x: 5*32 + 16, y: 6*32 + 16 }));
 
         stage.getRoom = function (i) {
             return this.p.rooms[i];
