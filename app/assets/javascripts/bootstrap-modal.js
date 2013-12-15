@@ -54,7 +54,9 @@
 
     this.escape()
 
-    this.$element.on('click.dismiss.modal', '[data-dismiss="modal"]', $.proxy(this.hide, this))
+    this.$element.on('click.dismiss.modal', '[data-dismiss="modal"]', $.proxy(function () {
+      this.hide();
+    }, this))
 
     this.backdrop(function () {
       var transition = $.support.transition && that.$element.hasClass('fade')

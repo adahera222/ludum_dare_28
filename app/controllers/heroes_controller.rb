@@ -3,7 +3,6 @@ class HeroesController < ApplicationController
 
   # GET /heroes
   def index
-    @heroes = Hero.all
   end
 
   # GET /heroes/1
@@ -21,12 +20,20 @@ class HeroesController < ApplicationController
 
   # POST /heroes
   def create
-    @hero = Hero.new(hero_params)
 
-    if @hero.save
-      redirect_to @hero, notice: 'Hero was successfully created.'
-    else
-      render action: 'new'
+    @user = Hero.find_by(handle: session['user'])
+    @hero = Hero.find_or_create_by({ handle: params[:hero][:handle] }) do |hero|
+      hero.handle = params[:hero][:handle]
+      hero.hp = 1
+      hero.sword = false
+    end
+
+    @hero.hp += 1
+    @user.hp -= 1
+
+    if @hero.save && @user.save
+      flash[:notice] = "Thank you so much!"
+      render js: "Q.state.set('hp', #{ @user.hp });"
     end
   end
 
