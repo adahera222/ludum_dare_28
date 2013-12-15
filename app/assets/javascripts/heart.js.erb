@@ -359,11 +359,13 @@ window.addEventListener("load",function() {
 
             /* we slide room 2 to x: -224, y: 224 and room 3 to x: 0, y: 0 */
 
+            Q('Monster').each(function () {
+                this.destroy();
+            });
+
             stage.collisionLayer(new_room);
             stage.p.rooms[Q.state.get("room")] = new_room;
-            current_room.animate({ x: -(direction[0]) * (ROOM_WIDTH / 2), y: -(direction[1]) * (ROOM_HEIGHT / 2) }, { callback: function () {
-                stage.remove(current_room); // I sort of have to use an anonymous function here
-            }});
+            current_room.animate({ x: -(direction[0]) * (ROOM_WIDTH / 2), y: -(direction[1]) * (ROOM_HEIGHT / 2) });
 
             new_room.animate({ x: 0, y:0 });
             player.animate({ x: rel_x, y: rel_y });
