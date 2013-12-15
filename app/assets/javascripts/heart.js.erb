@@ -1,4 +1,5 @@
 window.addEventListener("load",function() {
+
     /* temporarily we will load on the front page so that we don't need to login with twitter */
     //  if ($('#heart-core').length !== 1) return;
 
@@ -218,9 +219,10 @@ window.addEventListener("load",function() {
     });
 
     Q.scene("heart_bar", function(stage) {
+        stage.p = {};
 
         var hearts = [];
-        for (i = 0; i < 3; i++) {
+        for (i = 0; i < Q.state.get("hp"); i++) {
             offset = 32 * i + 20;
             hearts.push(new Q.Heart({
                 x: ROOM_WIDTH - 36 - (32 * i),
@@ -231,11 +233,15 @@ window.addEventListener("load",function() {
             heart.on("click", heart.giveHeart);
         };
 
-        hearts[0].breakHeart().breakHeart();
-        hearts[1].breakHeart();
+        stage.p.hearts = hearts;
+        this.updateHearts = function (hp) {
+            var length = stage.p.hearts.length;
 
-        this.updateHearts = function () {
-            console.log("updating hearts");
+            for (; length > hp; length--) {
+                var heart = stage.p.hearts.pop();
+
+                stage.remove(heart);
+            }
         };
 
         Q.state.on("change.hp", this.updateHearts);
@@ -250,7 +256,7 @@ window.addEventListener("load",function() {
             room: 2,
             room_x: 0,
             room_y: 0,
-            hp: 2,
+            hp: $('[data-hp]').data('hp'),
 
             // whether the game state thinks the player is "leaving"
             exiting: false
