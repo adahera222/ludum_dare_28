@@ -37,7 +37,11 @@ window.addEventListener("load",function() {
         move_right: { frames: [165, 166], rate:1/2 },
         move_up: { frames: [164,184], rate: 1/2 },
         move_down: { frames: [185, 186], rate: 1/2 },
-        stand: { frames: [185], rate: 1/2 }
+        stand: { frames: [185], rate: 1/2 },
+    });
+
+    Q.animations('sword', {
+            stab_right: { frames: [204, 205, 206], rate: 1/15, trigger: "stabDone", loop: false }
     });
 
     Q.getActiveStage = function () {
@@ -56,6 +60,8 @@ window.addEventListener("load",function() {
     var RIGHT = [ 1,  0];
     var UP    = [ 0, -1];
     var DOWN  = [ 0,  1];
+
+    var DIRECTIONS = [LEFT, RIGHT, UP, DOWN];
 
     Q.input.keyboardControls();
     Q.input.joypadControls();
@@ -129,7 +135,7 @@ window.addEventListener("load",function() {
     };
 
     Q.monsters = [
-       ["Monster", { x: 5*32 + 16, y: 4*32 + 16}],
+       ["Bush", { x: 5*32 + 16, y: 4*32 + 16}],
        ["Monster", { x: 8*32 + 16, y: 2*32 + 16}],
        ["Monster", { x: 11*32 + 16, y: 8*32 + 16}]
     ]
@@ -176,20 +182,34 @@ window.addEventListener("load",function() {
 
     Q.Sprite.extend("Monster", {
         init: function (p) {
-            p.sheet = "hand";
-            p.frame = 37;
-            p.type = SPRITE_ENEMY;
-            this._super(p);
-            this.add("2d");
+            p.family = "Monster";
+            this._super(p, {
+                sheet: "hand",
+                stepDistance: 32,
+                frame: 149,
+                type: SPRITE_ENEMY,
+                collisionMask: SPRITE_TILES | SPRITE_ENEMY | SPRITE_PLAYER,
+                hp: 2
+            });
 
-            this.on("bump.left", this.melee);
+            this.add("2d, wandering");
+
+            this.on("bump.left, bump.right, bump.top, bump.bottom", this.melee);
             this.damagePlayer = Q.debounce(function (amount) {
                 Q.state.damagePlayer(amount);
-            })
+            });
+        },
+
+        takeDamage: function (amount) {
+            console.log("taking damage");
+            this.p.hp -= amount;
+
+            if (this.p.hp < 1) {
+                this.destroy();
+            }
         },
 
         melee: function (col) {
-            console.log("bump.left");
 
             if (col.obj.isA("Player")) {
                 this.damagePlayer(1);
@@ -197,10 +217,58 @@ window.addEventListener("load",function() {
         }
     });
 
+    Q.Monster.extend("Bush", {
+        init: function (p) {
+            p.frame = 158;
+            p.hp = 1;
+
+            this._super(p);
+            this.del("wandering");
+        },
+
+        melee: function (col) {
+            // it is a bush...
+        }
+    });
+
+    Q.Sprite.extend("Sword", {
+        init: function (p) {
+            p.sheet = "hand";
+            p.frame = 186;
+            p.sprite = "sword";
+
+            this._super(p);
+            this.add("2d, animation");
+            this.on("stabDone");
+
+            this.on("bump.left, bump.right, bump.top, bump.bottom", this.melee);
+            this.damageMonster = Q.debounce(function (obj, amount) {
+                obj.takeDamage(amount);
+            });
+        },
+
+        melee: function (col) {
+            if (col.obj.p.family === "Monster") {
+                this.damageMonster(col.obj, 1);
+            }
+        },
+
+        stabDone: function () {
+            console.log("STABBED");
+            this.stage.remove(this);
+        },
+
+    });
+
     Q.Sprite.extend("Player", {
         init: function(p) {
             p.z = 1; // player on TOP!
             p.sprite = "player";
+            p.stepDistance = 32;
+            p.stepDelay = 0.1;
+
+            /* TODO for debugging */
+            p.sword = Q.state.get("sword");
 
             this._super(p,{
                 sheet:"hand",
@@ -213,6 +281,19 @@ window.addEventListener("load",function() {
             this.on("step", this.checkBounds);
 
             this.heartAction = Q.debounce(this._heartAction, 500);
+            this.melee       = Q.debounce(this._melee, 50);
+            this.sword       = new Q.Sword({});
+
+        },
+
+        _melee: function () {
+            if (this.p.sword === false) return;
+
+            console.log("sword!");
+            this.sword.p.x = this.p.x + 16;
+            this.sword.p.y = this.p.y;
+            Q.getActiveStage().insert(this.sword);
+            this.sword.play("stab_right");
         },
 
         _heartAction: function () {
@@ -321,6 +402,7 @@ window.addEventListener("load",function() {
             room_y: 0,
             hp: $('[data-hp]').data('hp') || 1,
             damage: 0,
+            sword: $('[data-sword]').data('sword') || true,
 
             // whether the game state thinks the player is "leaving"
             exiting: false
@@ -413,12 +495,80 @@ window.addEventListener("load",function() {
         Q.state.checkPlayerDeath();
     });
 
+    Q.component("wandering", {
+        added: function () {
+            var p = this.entity.p;
+
+            if(!p.stepDistance) { p.stepDistance = 32; }
+            if(!p.stepDelay) { p.stepDelay = 0.5; }
+
+            p.stepWait = 0;
+            this.entity.on("step",this,"step");
+            this.entity.on("hit", this,"collision");
+        },
+
+        collision: function(col) {
+          var p = this.entity.p;
+
+          if(p.stepping) {
+            p.stepping = false;
+            p.x = p.origX;
+            p.y = p.origY;
+          }
+
+        },
+
+        step: function (dt) {
+          var p = this.entity.p,
+              moved = false;
+          p.stepWait -= dt;
+
+          if(p.stepping) {
+            p.x += p.diffX * dt / p.stepDelay;
+            p.y += p.diffY * dt / p.stepDelay;
+          }
+
+          if(p.stepWait > 0) { return; }
+          if(p.stepping) {
+            p.x = p.destX;
+            p.y = p.destY;
+          }
+          p.stepping = false;
+
+          p.diffX = 0;
+          p.diffY = 0;
+
+          var input = DIRECTIONS[parseInt(Math.random() * 10, 10) % 4];
+
+          if(input === LEFT) {
+            p.diffX = -p.stepDistance;
+          } else if(input === RIGHT) {
+            p.diffX = p.stepDistance;
+          }
+
+          if(input === UP) {
+            p.diffY = -p.stepDistance;
+          } else if(input === DOWN) {
+            p.diffY = p.stepDistance;
+          }
+
+          if(p.diffY || p.diffX ) { 
+            p.stepping = true;
+            p.origX = p.x;
+            p.origY = p.y;
+            p.destX = p.x + p.diffX;
+            p.destY = p.y + p.diffY;
+            p.stepWait = p.stepDelay; 
+          }
+        }
+    })
+
     Q.component("heartAction", {
 
         added: function() {
             var p = this.entity.p;
 
-            this.entity.on("step",this,"step");
+            this.entity.on("step", this, "step");
         },
 
         step: function(dt) {
@@ -426,6 +576,8 @@ window.addEventListener("load",function() {
 
             if(Q.inputs['action']) {
                 this.entity.heartAction();
+            } else if (Q.inputs['fire']) {
+                this.entity.melee();
             }
         }
     });
