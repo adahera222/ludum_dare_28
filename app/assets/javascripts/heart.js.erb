@@ -10,6 +10,13 @@ window.addEventListener("load",function() {
     .include("Sprites, Scenes, Input, 2D, UI, Anim")
     .setup("heart-core", { width: 14*32, height: 9*32 });
 
+    Q.animations('hand', {
+        move_right: { frames: [7,6,5,4,3,2,1], rate: 1/15},
+        move_left: { frames: [19,18,17,16,15], rate:1/15 },
+        move_up: { frames: [165,185], rate: 1/15 },
+        move_down: { frames: [186, 187], rate: 1/15 }
+    });
+
     Q.getActiveStage = function () {
         return Q.stages[0];
     };
@@ -96,9 +103,21 @@ window.addEventListener("load",function() {
         }
     });
 
-    Q.Sprite.extend("FullHeart", {
+    Q.Sprite.extend("Heart", {
         init: function (p) {
+            p.asset  = "full-heart.png";
+            p.damage = 0;
+
             this._super(p);
+        },
+
+        breakHeart: function () {
+            if (this.p.asset === "broken-heart.png") return;
+
+            this.p.damage += 1;
+            this.p.asset = (this.p.damage === 1)? "half-heart.png" : "broken-heart.png";
+
+            return this;
         }
     });
 
@@ -122,12 +141,13 @@ window.addEventListener("load",function() {
             p.z = 1; // player on TOP!
 
             this._super(p,{
-                sheet:"player",
+                sheet:"hand",
+                frame: 186,
                 type: SPRITE_PLAYER,
                 collisionMask: SPRITE_TILES | SPRITE_ENEMY | SPRITE_DOT
             });
 
-            this.add("2d, stepControls, tween");
+            this.add("2d, stepControls, tween, animation");
             this.on("step", this.checkBounds);
         },
 
@@ -143,25 +163,44 @@ window.addEventListener("load",function() {
             var exiting = out_x || out_y;
 
             Q.state.set("exiting", exiting);
+        },
+
+        step: function(dt) {
+            if(this.p.vx > 0) {
+                this.play("move_right");
+            } else if(this.p.vx < 0) {
+                this.play("move_left");
+            } else if (this.p.vy > 0) {
+                this.play("move_down");
+            } else if (this.p.vy < 0) {
+                this.play("move_up");
+            } else {
+                // no animation
+            }
         }
     });
 
     Q.scene("heart_bar", function(stage) {
 
         var hearts = [];
-        for (i = 0; i < 1; i++) {
-            hearts.push(new Q.FullHeart({
-                x: 10,
-                y: 10
+        for (i = 0; i < 3; i++) {
+            offset = 32 * i + 20;
+            hearts.push(new Q.Heart({
+                x: ROOM_WIDTH - 36 - (32 * i),
+                y: 36
             }));
-            stage.insert(hearts[0]);
+
+            stage.insert(hearts[i]);
         };
+
+        hearts[0].breakHeart().breakHeart();
+        hearts[1].breakHeart();
 
         this.updateHearts = function () {
             console.log("updating hearts");
         };
 
-        Q.state.change("hp", this.updateHearts);
+        Q.state.on("change.hp", this.updateHearts);
     });
 
     Q.scene("overworld",function(stage) {
@@ -243,7 +282,7 @@ window.addEventListener("load",function() {
         Q.stageScene("overworld", 0, { sort: function (a, b) {
             return a.p.z > b.p.z;
         }});
-        // Q.stageScene("heart_bar", 0, { sort: function (a, b) {
+        Q.stageScene("heart_bar", 1);
     });
 });
 
