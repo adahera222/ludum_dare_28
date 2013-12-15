@@ -7,6 +7,7 @@ window.addEventListener("load",function() {
     .include("Sprites, Scenes, Input, 2D, UI, Anim")
     .setup("heart-core", { width: 14*32, height: 9*32 });
 
+
     Q.debounce = function(func, wait, immediate) {
         var timeout, args, context, timestamp, result;
         return function() {
@@ -33,8 +34,8 @@ window.addEventListener("load",function() {
 
 
     Q.animations('player', {
-        move_left: { frames: [], rate: 1/15},
-        move_right: { frames: [165, 166], rate:1/2 },
+        move_left: { frames: [165, 166], rate: 1/2},
+        move_right: { frames: [167, 168], rate:1/2 },
         move_up: { frames: [164,184], rate: 1/2 },
         move_down: { frames: [185, 186], rate: 1/2 },
         stand: { frames: [185], rate: 1/2 },
@@ -75,14 +76,10 @@ window.addEventListener("load",function() {
     };
 
     Q.state.damagePlayer = function (amount) {
-        console.log("damaging player");
-
         this.set("damage", this.p.damage + amount);
     };
 
     Q.state.checkPlayerDeath = function () {
-        console.log("Checking player death...");
-        console.log("%o / %o", this.p.damage, this.p.hp);
         if (2 * this.p.hp > this.p.damage) return;
 
         /* player is dead */
@@ -135,9 +132,18 @@ window.addEventListener("load",function() {
     };
 
     Q.monsters = [
-       ["Bush", { x: 5*32 + 16, y: 4*32 + 16}],
-       ["Monster", { x: 8*32 + 16, y: 2*32 + 16}],
-       ["Monster", { x: 11*32 + 16, y: 8*32 + 16}]
+        [
+           ["Bush", { x: 5*32 + 16, y: 4*32 + 16}],
+           ["HeartTree", { x: 4*32 + 4*16, y: 0 + 3*16 }],
+           ["Monster", { x: 11*32 + 16, y: 8*32 + 16}]
+        ],
+        [],
+        [
+           ["Bush", { x: 5*32 + 16, y: 4*32 + 16}],
+           ["Monster", { x: 8*32 + 16, y: 2*32 + 16}],
+           ["Monster", { x: 11*32 + 16, y: 8*32 + 16}]
+        ],
+        []
     ]
 
     Q.TileLayer.extend("Room", {
@@ -145,11 +151,14 @@ window.addEventListener("load",function() {
             this._super(p);
 
             this.add("tween");
+            this.del("2d");
         },
 
         populate: function (stage) {
-            for (i = 0; i < Q.monsters.length; i++) {
-                var monster = Q.monsters[i];
+            var monster_list = Q.monsters[Q.state.get("room")];
+
+            for (i = 0; i < monster_list.length; i++) {
+                var monster = monster_list[i];
                 var klass = Q[monster[0]];
                 var options = monster[1];
 
@@ -164,10 +173,6 @@ window.addEventListener("load",function() {
             p.damage = 0;
 
             this._super(p);
-        },
-
-        giveHeart: function () {
-            console.log("yo");
         },
 
         breakHeart: function () {
@@ -201,7 +206,6 @@ window.addEventListener("load",function() {
         },
 
         takeDamage: function (amount) {
-            console.log("taking damage");
             this.p.hp -= amount;
 
             if (this.p.hp < 1) {
@@ -231,6 +235,20 @@ window.addEventListener("load",function() {
         }
     });
 
+    Q.Sprite.extend("HeartTree", {
+        init: function (p) {
+            p.asset = '<%= asset_path("heart_tree.png") %>';
+            p.type = SPRITE_TILES;
+
+            this._super(p);
+        },
+
+        melee: function (col) {
+            // it is bigger than a bush
+            $("[data-target=hero-form]").trigger("click.bs.modal.data-api");
+        }
+    });
+
     Q.Sprite.extend("Sword", {
         init: function (p) {
             p.sheet = "hand";
@@ -254,7 +272,6 @@ window.addEventListener("load",function() {
         },
 
         stabDone: function () {
-            console.log("STABBED");
             this.stage.remove(this);
         },
 
@@ -264,7 +281,7 @@ window.addEventListener("load",function() {
         init: function(p) {
             p.z = 1; // player on TOP!
             p.sprite = "player";
-            p.stepDistance = 32;
+            p.stepDistance = 24;
             p.stepDelay = 0.1;
 
             /* TODO for debugging */
@@ -278,18 +295,33 @@ window.addEventListener("load",function() {
             });
 
             this.add("2d, stepControls, tween, animation, heartAction");
-            this.on("step", this.checkBounds);
 
             this.heartAction = Q.debounce(this._heartAction, 500);
             this.melee       = Q.debounce(this._melee, 50);
             this.sword       = new Q.Sword({});
 
+            this.on("hit", this.talk);
+            this.on("step", this.checkBounds);
+        },
+
+        talk: function (col) {
+
+            if (col.obj.isA("HeartTree") && Q.state.get("hp") < 3) {
+                (Q.debounce(function () {
+                    $("[data-target=#heart-talk]").trigger("click.bs.modal.data-api");
+                }, 500))();
+
+            } else if (col.obj.isA("HeartBlade") && Q.state.get("hp") >= 3) {
+                (Q.debounce(function () {
+                    Q.state.set("sword", true);
+                    $("[data-target=#blade-get]").trigger("click.bs.modal.data-api");
+                }, 500))();
+            }
         },
 
         _melee: function () {
             if (this.p.sword === false) return;
 
-            console.log("sword!");
             this.sword.p.x = this.p.x + 16;
             this.sword.p.y = this.p.y;
             Q.getActiveStage().insert(this.sword);
@@ -297,8 +329,6 @@ window.addEventListener("load",function() {
         },
 
         _heartAction: function () {
-            console.log("heartAction");
-
             $("[data-toggle=modal]").trigger("click.bs.modal.data-api");
         },
 
@@ -350,7 +380,6 @@ window.addEventListener("load",function() {
         /* when the player loses hearts we 
          * do this */
         this.updateHearts = function (hp) {
-            console.log("updating hearts...");
             var length = stage.p.hearts.length;
 
             for (; length > hp; length--) {
@@ -363,7 +392,6 @@ window.addEventListener("load",function() {
         };
 
         this.breakHeart = function (damage) {
-            console.log("breaking hearts...");
             var sentinel = true;
             var i = 0;
             var length = stage.p.hearts.length;
@@ -425,9 +453,6 @@ window.addEventListener("load",function() {
             return this.p.rooms[i];
         };
 
-        stage.on("click", function () { console.log("wat"); })
-        player.on("click", function () { console.log("player"); })
-
         this.zeldaSlide = function () {
             if (Q.state.get("exiting") === false) return false;
 
@@ -461,7 +486,14 @@ window.addEventListener("load",function() {
                 this.destroy();
             });
 
-            console.log("%o, %o", rel_x, rel_y);
+            Q('Bush').each(function () {
+                this.destroy();
+            });
+
+            Q('HeartTree').each(function () {
+                this.destroy();
+            });
+
             stage.collisionLayer(new_room);
             stage.p.rooms[Q.state.get("room")] = new_room;
             current_room.animate({ x: -(direction[0]) * (ROOM_WIDTH / 2), y: -(direction[1]) * (ROOM_HEIGHT / 2) }, {
@@ -484,7 +516,7 @@ window.addEventListener("load",function() {
     });
 
     console.log("<%= asset_path("full-heart.png") %>, <%= asset_path("half-heart.png") %>, <%= asset_path("broken-heart.png") %>, <%= asset_path("background.tmx") %>, <%= asset_path("zelda_hand_tiles.png") %>, <%= asset_path("zelda_hand_test.tmx") %>, <%= asset_path("room_0.tmx") %>, <%= asset_path("room_1.tmx") %>, <%= asset_path("room_2.tmx") %>, <%= asset_path("room_3.tmx") %>");
-    Q.load("<%= asset_path("full-heart.png") %>, <%= asset_path("half-heart.png") %>, <%= asset_path("broken-heart.png") %>, <%= asset_path("background.tmx") %>, <%= asset_path("zelda_hand_tiles.png") %>, <%= asset_path("zelda_hand_test.tmx") %>, <%= asset_path("room_0.tmx") %>, <%= asset_path("room_1.tmx") %>, <%= asset_path("room_2.tmx") %>, <%= asset_path("room_3.tmx") %>", function() {
+    Q.load("<%= asset_path('heart_tree.png')%>, <%= asset_path("full-heart.png") %>, <%= asset_path("half-heart.png") %>, <%= asset_path("broken-heart.png") %>, <%= asset_path("background.tmx") %>, <%= asset_path("zelda_hand_tiles.png") %>, <%= asset_path("zelda_hand_test.tmx") %>, <%= asset_path("room_0.tmx") %>, <%= asset_path("room_1.tmx") %>, <%= asset_path("room_2.tmx") %>, <%= asset_path("room_3.tmx") %>", function() {
         Q.sheet("hand","<%= asset_path('zelda_hand_tiles.png') %>", { tilew: 32, tileh: 32});
         Q.stageScene("overworld", 0, { sort: function (a, b) {
             return a.p.z > b.p.z;
