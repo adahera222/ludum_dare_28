@@ -5,7 +5,7 @@ window.addEventListener("load",function() {
 
     var Q = window.Q = Quintus({ imagePath: "/", dataPath: "/", development: true })
     .include("Sprites, Scenes, Input, 2D, UI, Anim")
-    .setup("heart-core", { width: 14*32, height: 9*32 });
+    .setup("heart-core", { width: 28*32, height: 18*32 });
 
 
     Q.debounce = function(func, wait, immediate) {
@@ -54,8 +54,8 @@ window.addEventListener("load",function() {
     var SPRITE_ENEMY  = 4;
     var SPRITE_DOT    = 8;
 
-    var ROOM_WIDTH  = 448;
-    var ROOM_HEIGHT = 288;
+    var ROOM_WIDTH  = 448*2;
+    var ROOM_HEIGHT = 288*2;
 
     var LEFT  = [-1,  0];
     var RIGHT = [ 1,  0];
@@ -133,15 +133,40 @@ window.addEventListener("load",function() {
 
     Q.monsters = [
         [
-           ["Bush", { x: 5*32 + 16, y: 4*32 + 16}],
-           ["HeartTree", { x: 4*32 + 4*16, y: 0 + 3*16 }],
-           ["Monster", { x: 11*32 + 16, y: 8*32 + 16}]
+           ["HeartBlade", { x: 22*32 + 2*16, y: 1*32 + 3*16}],
+           ["HeartTree",  { x: 7*32 + 4*16, y: 0 + 3*16 }],
+           ["Bush", { x: 5*32 + 16,  y: 3*32 + 16}],
+           ["Bush", { x: 6*32 + 16,  y: 5*32 + 16}],
+           ["Bush", { x: 6*32 + 16,  y: 7*32 + 16}],
+           ["Bush", { x: 6*32 + 16,  y: 9*32 + 16}],
+           ["Bush", { x: 12*32 + 16,  y: 3*32 + 16}],
+           ["Bush", { x: 11*32 + 16,  y: 5*32 + 16}],
+           ["Bush", { x: 11*32 + 16,  y: 7*32 + 16}],
+           ["Bush", { x: 11*32 + 16,  y: 9*32 + 16}],
+           ["Monster", { x: 18*32 + 16,  y: 8*32 + 16}],
+           ["Monster", { x: 20*32 + 16,  y: 8*32 + 16}],
+           ["Monster", { x: 22*32 + 16,  y: 8*32 + 16}],
+           ["Monster", { x: 18*32 + 16,  y: 10*32 + 16}],
+           ["Monster", { x: 20*32 + 16,  y: 10*32 + 16}],
+           ["Monster", { x: 22*32 + 16,  y: 10*32 + 16}],
+           ["Monster", { x: 18*32 + 16,  y: 12*32 + 16}],
+           ["Monster", { x: 20*32 + 16,  y: 12*32 + 16}],
+           ["Monster", { x: 22*32 + 16,  y: 12*32 + 16}]
         ],
         [],
         [
-           ["Bush", { x: 5*32 + 16, y: 4*32 + 16}],
-           ["Monster", { x: 8*32 + 16, y: 2*32 + 16}],
-           ["Monster", { x: 11*32 + 16, y: 8*32 + 16}]
+           ["Monster", { x: 10*32 + 16,  y: 4*32 + 16}],
+           ["Monster", { x: 12*32 + 16,  y: 4*32 + 16}],
+           ["Monster", { x: 14*32 + 16,  y: 4*32 + 16}],
+           ["Monster", { x: 10*32 + 16,  y: 6*32 + 16}],
+           ["Monster", { x: 12*32 + 16,  y: 6*32 + 16}],
+           ["Monster", { x: 14*32 + 16,  y: 6*32 + 16}],
+           ["Bush", { x: 10*32 + 16,  y: 9*32 + 16}],
+           ["Bush", { x: 12*32 + 16,  y: 9*32 + 16}],
+           ["Bush", { x: 14*32 + 16,  y: 9*32 + 16}],
+           ["Bush", { x: 10*32 + 16,  y: 11*32 + 16}],
+           ["Bush", { x: 12*32 + 16,  y: 11*32 + 16}],
+           ["Bush", { x: 14*32 + 16,  y: 11*32 + 16}]
         ],
         []
     ]
@@ -241,11 +266,15 @@ window.addEventListener("load",function() {
             p.type = SPRITE_TILES;
 
             this._super(p);
-        },
+        }
+    });
 
-        melee: function (col) {
-            // it is bigger than a bush
-            $("[data-target=hero-form]").trigger("click.bs.modal.data-api");
+    Q.Sprite.extend("HeartBlade", {
+        init: function (p) {
+            p.asset = '<%= asset_path("heart_blade.png") %>';
+            p.type = SPRITE_TILES;
+
+            this._super(p);
         }
     });
 
@@ -305,6 +334,8 @@ window.addEventListener("load",function() {
         },
 
         talk: function (col) {
+            console.log("in talk");
+            console.log("col: %o", col.obj.className);
 
             if (col.obj.isA("HeartTree") && Q.state.get("hp") < 3) {
                 (Q.debounce(function () {
@@ -315,6 +346,7 @@ window.addEventListener("load",function() {
                 (Q.debounce(function () {
                     Q.state.set("sword", true);
                     $("[data-target=#blade-get]").trigger("click.bs.modal.data-api");
+                    col.obj.p.asset = "<%= asset_path('stone.png') %>";
                 }, 500))();
             }
         },
@@ -516,7 +548,7 @@ window.addEventListener("load",function() {
     });
 
     console.log("<%= asset_path("full-heart.png") %>, <%= asset_path("half-heart.png") %>, <%= asset_path("broken-heart.png") %>, <%= asset_path("background.tmx") %>, <%= asset_path("zelda_hand_tiles.png") %>, <%= asset_path("zelda_hand_test.tmx") %>, <%= asset_path("room_0.tmx") %>, <%= asset_path("room_1.tmx") %>, <%= asset_path("room_2.tmx") %>, <%= asset_path("room_3.tmx") %>");
-    Q.load("<%= asset_path('heart_tree.png')%>, <%= asset_path("full-heart.png") %>, <%= asset_path("half-heart.png") %>, <%= asset_path("broken-heart.png") %>, <%= asset_path("background.tmx") %>, <%= asset_path("zelda_hand_tiles.png") %>, <%= asset_path("zelda_hand_test.tmx") %>, <%= asset_path("room_0.tmx") %>, <%= asset_path("room_1.tmx") %>, <%= asset_path("room_2.tmx") %>, <%= asset_path("room_3.tmx") %>", function() {
+    Q.load("<%= asset_path('stone.png')%>, <%= asset_path('heart_blade.png')%>, <%= asset_path('heart_tree.png')%>, <%= asset_path("full-heart.png") %>, <%= asset_path("half-heart.png") %>, <%= asset_path("broken-heart.png") %>, <%= asset_path("background.tmx") %>, <%= asset_path("zelda_hand_tiles.png") %>, <%= asset_path("zelda_hand_test.tmx") %>, <%= asset_path("room_0.tmx") %>, <%= asset_path("room_1.tmx") %>, <%= asset_path("room_2.tmx") %>, <%= asset_path("room_3.tmx") %>", function() {
         Q.sheet("hand","<%= asset_path('zelda_hand_tiles.png') %>", { tilew: 32, tileh: 32});
         Q.stageScene("overworld", 0, { sort: function (a, b) {
             return a.p.z > b.p.z;
