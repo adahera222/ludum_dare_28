@@ -1,3 +1,5 @@
+require "active_record"
+
 class SessionsController < ApplicationController
 
   def create
@@ -9,6 +11,11 @@ class SessionsController < ApplicationController
   def show
     if session['access_token'] && session['access_token_secret']
       @user = client.user(:include_entities => true)
+      @hero = Hero.find_or_create_by(handle: @user.screen_name) do |hero|
+          hero.hp = 1
+          hero.room = 0
+          hero.sword = false
+      end
     else
       redirect_to failure_path
     end
