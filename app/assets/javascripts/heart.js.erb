@@ -128,12 +128,27 @@ window.addEventListener("load",function() {
         });
     };
 
+    Q.monsters = [
+       ["Monster", { x: 5*32 + 16, y: 4*32 + 16}],
+       ["Monster", { x: 8*32 + 16, y: 2*32 + 16}],
+       ["Monster", { x: 11*32 + 16, y: 8*32 + 16}]
+    ]
 
     Q.TileLayer.extend("Room", {
         init: function (p) {
             this._super(p);
 
             this.add("tween");
+        },
+
+        populate: function (stage) {
+            for (i = 0; i < Q.monsters.length; i++) {
+                var monster = Q.monsters[i];
+                var klass = Q[monster[0]];
+                var options = monster[1];
+
+                stage.insert(new klass(options));
+            }
         }
     });
 
@@ -304,7 +319,7 @@ window.addEventListener("load",function() {
             room: 2,
             room_x: 0,
             room_y: 0,
-            hp: $('[data-hp]').data('hp'),
+            hp: $('[data-hp]').data('hp') || 1,
             damage: 0,
 
             // whether the game state thinks the player is "leaving"
@@ -321,7 +336,8 @@ window.addEventListener("load",function() {
         stage.p.rooms[Q.state.get("room")] = room;
 
         var player  = stage.insert(new Q.Player({  x: starting_x, y: starting_y }));
-        var monster = stage.insert(new Q.Monster({ x: 5*32 + 16, y: 6*32 + 16 }));
+
+        room.populate(stage);
 
         stage.getRoom = function (i) {
             return this.p.rooms[i];
@@ -363,11 +379,21 @@ window.addEventListener("load",function() {
                 this.destroy();
             });
 
+            console.log("%o, %o", rel_x, rel_y);
             stage.collisionLayer(new_room);
             stage.p.rooms[Q.state.get("room")] = new_room;
-            current_room.animate({ x: -(direction[0]) * (ROOM_WIDTH / 2), y: -(direction[1]) * (ROOM_HEIGHT / 2) });
+            current_room.animate({ x: -(direction[0]) * (ROOM_WIDTH / 2), y: -(direction[1]) * (ROOM_HEIGHT / 2) }, {
+                callback: function () {
+                    stage.remove(current_room);
+                }
+            });
 
-            new_room.animate({ x: 0, y:0 });
+            new_room.animate({ x: 0, y:0 }, {
+                callback: function () {
+                    new_room.populate(stage);
+                }
+            });
+
             player.animate({ x: rel_x, y: rel_y });
         };
 
