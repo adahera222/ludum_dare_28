@@ -2,6 +2,10 @@ window.addEventListener("load",function() {
     /* temporarily we will load on the front page so that we don't need to login with twitter */
     //  if ($('#heart-core').length !== 1) return;
 
+    // TODO uncomment this in production
+    // var Q = window.Q = Quintus({ imagePath: "public/assets/", dataPath: "public/assets/" })
+    // OK so in production we may need to just set image path to "/public/" because asset_path
+    // generates a string that includes "assets/"
     var Q = window.Q = Quintus({ imagePath: "/assets/", dataPath: "/assets/", development: true })
     .include("Sprites, Scenes, Input, 2D, UI, Anim")
     .setup("heart-core", { width: 14*32, height: 9*32 });
@@ -233,8 +237,8 @@ window.addEventListener("load",function() {
         Q.state.on("change.exiting", this.zeldaSlide);
     });
 
-    Q.load("zelda.png, background.tmx, zelda_hand_tiles.png, zelda_hand_test.tmx, room_0.tmx, room_1.tmx, room_2.tmx, room_3.tmx, sprites.png, sprites.json, level.json", function() {
-        Q.compileSheets("sprites.png","sprites.json");
+    console.log("<%= asset_path("full-heart.png") %>, <%= asset_path("half-heart.png") %>, <%= asset_path("broken-heart.png") %>, <%= asset_path("background.tmx") %>, <%= asset_path("zelda_hand_tiles.png") %>, <%= asset_path("zelda_hand_test.tmx") %>, <%= asset_path("room_0.tmx") %>, <%= asset_path("room_1.tmx") %>, <%= asset_path("room_2.tmx") %>, <%= asset_path("room_3.tmx") %>");
+    Q.load("full-heart.png, half-heart.png, broken-heart.png, background.tmx, zelda_hand_tiles.png, zelda_hand_test.tmx, room_0.tmx, room_1.tmx, room_2.tmx, room_3.tmx", function() {
         Q.sheet("hand","zelda_hand_tiles.png", { tilew: 32, tileh: 32});
         Q.stageScene("overworld", 0, { sort: function (a, b) {
             return a.p.z > b.p.z;
