@@ -1,6 +1,12 @@
-# ♥
+# Heart
 
 The theme of Ludum Dare 28 is "you only get one". In my game, I will explore the theme in terms of what it says about sharing. This game will be a zelda-like, and the working title is "Heart" for reasons that you will probably be able to guess.
+
+### Guide
+
+To enjoy Heart he most, you will need to bear some things in mind. Heart is buggy. When moving between rooms, do not hold the arrow keys down. This will sometimes cause Heart to crash.
+
+If, upon signing in with twitter, you get a BIG RED ERROR PAGE... just refresh the page. That should clear itself up.
 
 ### Resources
 
