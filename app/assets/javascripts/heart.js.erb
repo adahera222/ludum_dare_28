@@ -34,15 +34,22 @@ window.addEventListener("load",function() {
 
 
     Q.animations('player', {
-        move_left: { frames: [165, 166], rate: 1/2},
-        move_right: { frames: [167, 168], rate:1/2 },
-        move_up: { frames: [164,184], rate: 1/2 },
-        move_down: { frames: [185, 186], rate: 1/2 },
-        stand: { frames: [185], rate: 1/2 },
+        move_left:      { frames: [165, 166], rate: 1/2},
+        move_right:     { frames: [167, 168], rate:1/2 },
+        move_up:        { frames: [164,184], rate: 1/2 },
+        move_down:      { frames: [185, 186], rate: 1/2 },
+        stand:          { frames: [185], rate: 1/2 },
+        stand_left:     { frames: [165], rate: 1/2 },
+        stand_right:    { frames: [167], rate: 1/2 },
+        stand_up:       { frames: [164], rate: 1/2 },
+        stand_down:     { frames: [185], rate: 1/2 },
     });
 
     Q.animations('sword', {
-            stab_right: { frames: [204, 205, 206], rate: 1/15, trigger: "stabDone", loop: false }
+            stab_right: { frames: [161, 181, 201], rate: 1/15, trigger: "stabDone", loop: false },
+            stab_left: { frames: [162, 182, 202], rate: 1/15, trigger: "stabDone", loop: false },
+            stab_down: { frames: [223, 224, 225], rate: 1/15, trigger: "stabDone", loop: false },
+            stab_up: { frames: [203, 204, 205], rate: 1/15, trigger: "stabDone", loop: false }
     });
 
     Q.getActiveStage = function () {
@@ -281,8 +288,10 @@ window.addEventListener("load",function() {
     Q.Sprite.extend("Sword", {
         init: function (p) {
             p.sheet = "hand";
-            p.frame = 186;
+            p.frame = 12*20 + 5*2;
             p.sprite = "sword";
+            p.type = SPRITE_PLAYER;
+            p.collisionMask = SPRITE_ENEMY;
 
             this._super(p);
             this.add("2d, animation");
@@ -354,10 +363,21 @@ window.addEventListener("load",function() {
         _melee: function () {
             if (this.p.sword === false) return;
 
-            this.sword.p.x = this.p.x + 16;
-            this.sword.p.y = this.p.y;
+            this.sword.p.x = this.p.x + 32 * this.p.direction[0];
+            this.sword.p.y = this.p.y + 32 * this.p.direction[1];
             Q.getActiveStage().insert(this.sword);
-            this.sword.play("stab_right");
+
+            if (this.p.direction === RIGHT) {
+                this.sword.play("stab_right");
+            } else if (this.p.direction === LEFT) {
+                this.sword.play("stab_left");
+            } else if (this.p.direction === UP) {
+                this.sword.play("stab_up");
+            } else if (this.p.direction === DOWN) {
+                this.sword.play("stab_down");
+            } else {
+
+            }
         },
 
         _heartAction: function () {
@@ -378,17 +398,33 @@ window.addEventListener("load",function() {
             Q.state.set("exiting", exiting);
         },
 
+        /* animations for player movement */
+        /* and updating direction */
         step: function(dt) {
             if(this.p.diffX > 0) {
+                this.p.direction = RIGHT;
                 this.play("move_right");
-            } else if(this.p.diffX < 0) {
+            } else if (this.p.diffX < 0) {
+                this.p.direction = LEFT;
                 this.play("move_left");
             } else if (this.p.diffY > 0) {
+                this.p.direction = DOWN;
                 this.play("move_down");
             } else if (this.p.diffY < 0) {
+                this.p.direction = UP;
                 this.play("move_up");
             } else {
-                this.play("stand");
+                if (this.p.direction === LEFT) {
+                    this.play("stand_left");
+                } else if (this.p.direction === RIGHT) {
+                    this.play("stand_right");
+                } else if (this.p.direction === UP) {
+                    this.play("stand_up");
+                } else if (this.p.direction === DOWN) {
+                    this.play("stand_down");
+                } else {
+                    this.play("stand");
+                }
             }
         }
     });
