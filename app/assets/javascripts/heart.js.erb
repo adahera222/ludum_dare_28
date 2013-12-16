@@ -150,15 +150,15 @@ window.addEventListener("load",function() {
            ["Bush", { x: 11*32 + 16,  y: 5*32 + 16}],
            ["Bush", { x: 11*32 + 16,  y: 7*32 + 16}],
            ["Bush", { x: 11*32 + 16,  y: 9*32 + 16}],
-           ["Monster", { x: 18*32 + 16,  y: 8*32 + 16}],
-           ["Monster", { x: 20*32 + 16,  y: 8*32 + 16}],
-           ["Monster", { x: 22*32 + 16,  y: 8*32 + 16}],
            ["Monster", { x: 18*32 + 16,  y: 10*32 + 16}],
            ["Monster", { x: 20*32 + 16,  y: 10*32 + 16}],
            ["Monster", { x: 22*32 + 16,  y: 10*32 + 16}],
            ["Monster", { x: 18*32 + 16,  y: 12*32 + 16}],
            ["Monster", { x: 20*32 + 16,  y: 12*32 + 16}],
-           ["Monster", { x: 22*32 + 16,  y: 12*32 + 16}]
+           ["Monster", { x: 22*32 + 16,  y: 12*32 + 16}],
+           ["Monster", { x: 18*32 + 16,  y: 14*32 + 16}],
+           ["Monster", { x: 20*32 + 16,  y: 14*32 + 16}],
+           ["Monster", { x: 22*32 + 16,  y: 14*32 + 16}]
         ],
         [],
         [
@@ -220,7 +220,7 @@ window.addEventListener("load",function() {
             this._super(p, {
                 sheet: "hand",
                 stepDistance: 32,
-                frame: 149,
+                frame: 13 + 5*20,
                 type: SPRITE_ENEMY,
                 collisionMask: SPRITE_TILES | SPRITE_ENEMY | SPRITE_PLAYER,
                 hp: 2
@@ -252,7 +252,7 @@ window.addEventListener("load",function() {
 
     Q.Monster.extend("Bush", {
         init: function (p) {
-            p.frame = 158;
+            p.frame = 18 + 20*6;
             p.hp = 1;
 
             this._super(p);
