@@ -20,25 +20,30 @@ class HeroesController < ApplicationController
 
   # POST /heroes
   def create
-    screen_name = params[:hero][:handle]
+    screen_name = params[:hero][:handle].downcase
 
     if (screen_name[0] == "@")
       screen_name[0] = ""
     end
 
     @user = Hero.find_by(handle: session['user'])
-    @hero = Hero.find_or_create_by({ handle: params[:hero][:handle] }) do |hero|
-      hero.handle = params[:hero][:handle]
+    @hero = Hero.find_or_create_by({ handle: screen_name }) do |hero|
+      hero.handle = screen_name
       hero.hp = 1
       hero.sword = false
     end
 
-    @hero.hp += 1
-    @user.hp -= 1
+    if (@hero.hp > 0)
+      @hero.hp += 1
+      @user.hp -= 1
 
-    if @hero.save && @user.save
-      render js: "Q.state.set('hp', #{ @user.hp });"
+      if @hero.save && @user.save
+        render js: "Q.state.set('hp', #{ @user.hp });"
+      end
+    else
+      render js: 'alert("You tried to give someone your heart... but they were already gone.");'
     end
+
   end
 
   # PATCH/PUT /heroes/1

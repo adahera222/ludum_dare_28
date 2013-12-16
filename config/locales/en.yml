@@ -1,9 +1,9 @@
 en:
   app:
-    author: "Erik Michaels-Ober"
-    description: "A Ruby on Rails application that demonstrates how to use the Sign in with Twitter workflow using the twitter gem and OmniAuth."
-    description_html: "A %{ruby_on_rails} application that demonstrates how to use the %{sign_in_with_twitter} workflow using the %{twitter_gem} and %{omniauth}."
-    name: "Sign in with Twitter"
+    author: "arrogant.gamer"
+    description: "My submission for Ludum Dare 28, with the theme 'You Only Get One'"
+    description_html: "My submission for Ludum Dare 28, with the theme 'You Only Get One'"
+    name: "Heart"
   button:
     sign_in: "Sign in with Twitter"
     sign_out: "Sign out"

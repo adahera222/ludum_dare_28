@@ -14,12 +14,14 @@ class SessionsController < ApplicationController
     if session['access_token'] && session['access_token_secret']
 
       @user = client.user(:include_entities => true)
-      @hero = Hero.find_or_create_by(handle: @user.screen_name) do |hero|
+      screen_name = @user.screen_name.downcase
+      @hero = Hero.find_or_create_by(handle: screen_name) do |hero|
           hero.hp = 1
           hero.room = 0
           hero.sword = false
       end
-      session['user'] = @user.screen_name
+
+      session['user'] = screen_name
     else
       redirect_to failure_path
     end
